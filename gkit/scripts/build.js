@@ -12,7 +12,6 @@ const isProduction = process.env.NODE_ENV === 'production';
 
   const entryPoints = await globby([
     'src/index.ts', // global styles
-    'src/components/icons/index.ts', // icons
     'src/components/emoji/index.ts', // emoji
     'src/components/*/index.tsx', // components
     '!src/components/internal', // exclude internal components
@@ -40,7 +39,9 @@ const isProduction = process.env.NODE_ENV === 'production';
       'react',
       'react-dom',
       'classnames',
-      'focus-trap-react',
+      'react-focus-lock',
+      '@itgenio/icons',
+      '@itgenio/utils',
       '@radix-ui/react-dropdown-menu',
       '@radix-ui/react-select',
       '@radix-ui/react-toggle-group',
@@ -48,7 +49,6 @@ const isProduction = process.env.NODE_ENV === 'production';
       '@radix-ui/react-tooltip',
       '@radix-ui/react-toast',
       'use-onclickoutside',
-      '@itgenio/utils',
     ],
     plugins: [lessLoader(), svgPlugin(), writePlugin()],
   }).catch(e => console.error(e.message));

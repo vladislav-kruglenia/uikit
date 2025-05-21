@@ -1,0 +1,44 @@
+.uikit-page .icons {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+
+  .header {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    position: sticky;
+    left: 0;
+    top: 0;
+    background: var(--gkit-color-neutral-0);
+
+    .sizes {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+
+      .slider {
+        display: flex;
+      }
+    }
+
+    .search {
+      width: 300px;
+
+      .dismiss-icon {
+        cursor: pointer;
+      }
+    }
+  }
+
+  .board {
+    margin-top: 1rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .accordion-item .content {
+    color: unset;
+  }
+}

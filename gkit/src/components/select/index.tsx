@@ -1,18 +1,29 @@
 import './style.less';
 import * as SelectPrimitive from '@radix-ui/react-select';
 import classNames from 'classnames';
-import React, { Fragment, useEffect, useMemo, useRef, useState } from 'react';
-import useOnClickOutside from 'use-onclickoutside';
+import React, { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { CheckmarkIcon } from '@itgenio/icons/checkmarkIcon';
+import { ChevronDownFilledIcon } from '@itgenio/icons/chevronDownFilledIcon';
+import { ChevronUpFilledIcon } from '@itgenio/icons/chevronUpFilledIcon';
+import { SearchIcon } from '@itgenio/icons/searchIcon';
 import { groupByPropertyToDict } from '@itgenio/utils';
-import { CheckmarkIcon, ChevronUpFilledIcon, ChevronDownFilledIcon } from '../icons';
 import { InputsContainer } from '../internal/components/inputsContainer';
+import { useComposedRefs } from '../internal/hooks';
 import { generateId } from '../internal/utils/generateId';
+import { TextField, TextFieldProps } from '../textField';
+
+export const SELECT_DROPDOWN_CN = 'gkit-select-dropdown';
 
 type Sizes = 'small' | 'large';
-
 type Values = string | number;
 
-export type SelectOption = { label: string; value: Values; group?: string; customDropdownOption?: React.ReactNode };
+export type SelectOption = {
+  label: string;
+  value: Values;
+  group?: string;
+  customDropdownOption?: React.ReactNode;
+  customLabel?: React.ReactNode;
+};
 
 export type GroupsConfig = {
   hideLabel?: boolean;
@@ -48,6 +59,7 @@ export type SelectProps = {
   inline?: boolean;
   required?: boolean;
   startAdornment?: React.ReactNode;
+  search?: { active: boolean; props?: TextFieldProps };
 };
 
 export const Select = React.memo(
@@ -76,33 +88,62 @@ export const Select = React.memo(
     inline,
     required,
     startAdornment,
+    search,
   }: SelectProps) => {
     const [open, setOpen] = useState(false);
+    const [searchValueLocal, setSearchValue] = useState<string | undefined>(undefined);
     const id = useMemo(() => generateId(), []);
     const ref = useRef<HTMLDivElement>(null);
+    const selectSearchRef = useRef<HTMLInputElement | null>(null);
+    const composedSearchRef = useComposedRefs(selectSearchRef, search?.props?.inputRef);
     const canShowDropdown = open && !disabled;
 
-    useOnClickOutside(ref, () => setOpen(false));
+    const searchValue = search?.props?.value?.toString() ?? searchValueLocal;
+    const hasValueInSearch = searchValue && searchValue.length > 0;
 
-    const renderOptionItem = (option: SelectOption, index: number) => (
-      <SelectPrimitive.Item
-        id-qa={classNames({ [`${idQa}-option-${option.value}`]: idQa })}
-        className={classNames('gkit-select-option', size)}
-        key={index}
-        value={String(option.value)}
-        data-value={option.value}
-        disabled={disabledList.includes(option.value)}
-      >
-        <SelectPrimitive.ItemText>
-          {open && option.customDropdownOption ? option.customDropdownOption : option.label}
-        </SelectPrimitive.ItemText>
-        {option.value === value && (
-          <SelectPrimitive.ItemIndicator>
-            <CheckmarkIcon />
-          </SelectPrimitive.ItemIndicator>
-        )}
-      </SelectPrimitive.Item>
-    );
+    useEffect(() => {
+      if (!search?.active) return;
+
+      if (!open && hasValueInSearch) {
+        setSearchValue('');
+      }
+    }, [open, hasValueInSearch, search?.active]);
+
+    if (search?.active && hasValueInSearch) {
+      options = options.filter(option => option.label.toLowerCase().includes(searchValue.toLowerCase()));
+    }
+
+    useEffect(() => {
+      if (!search?.active || !open) return;
+
+      const portalElement = ref.current?.querySelector(`.${SELECT_DROPDOWN_CN}`)?.parentElement;
+      if (!portalElement) return;
+
+      portalElement.className = 'gkit-select-portal-with-search';
+    }, [search?.active, open]);
+
+    const renderOptionItem = (option: SelectOption, index: number) => {
+      return (
+        <SelectPrimitive.Item
+          id-qa={classNames({ [`${idQa}-option-${option.value}`]: idQa })}
+          className={classNames('gkit-select-option', size)}
+          key={index}
+          value={String(option.value)}
+          data-value={option.value}
+          disabled={disabledList.includes(option.value)}
+        >
+          <SelectPrimitive.ItemText>
+            {open && option.customDropdownOption ? option.customDropdownOption : option.label}
+          </SelectPrimitive.ItemText>
+
+          {option.value === value && (
+            <SelectPrimitive.ItemIndicator>
+              <CheckmarkIcon />
+            </SelectPrimitive.ItemIndicator>
+          )}
+        </SelectPrimitive.Item>
+      );
+    };
 
     const renderOptionsByGroups = () => {
       const optionsByGroupDict = groupByPropertyToDict(
@@ -149,6 +190,19 @@ export const Select = React.memo(
       ];
     };
 
+    const renderOptions = () => {
+      // Оптимизация. Когда селект закрыт, то нужно отрисовывать только выбранный элемент
+      if (!open) {
+        return options.map((option, index) => {
+          if (option.value !== value) return null;
+
+          return renderOptionItem(option, index);
+        });
+      }
+
+      return options.some(({ group }) => !!group) ? renderOptionsByGroups() : options.map(renderOptionItem);
+    };
+
     const onValueChange = (newValue: string) => {
       const option = options.find(option => String(option.value) === newValue);
 
@@ -159,17 +213,47 @@ export const Select = React.memo(
       onChange(option.value);
     };
 
+    const onSearchValueChange = useCallback(
+      (e: React.ChangeEvent<HTMLInputElement>) => {
+        setSearchValue(e.target.value);
+
+        search.props?.onChange?.(e);
+      },
+      [search?.props]
+    );
+
+    const onKeyDownContent = useCallback(
+      (e: React.KeyboardEvent<HTMLInputElement>) => {
+        if (search?.active) {
+          const node = e.target as HTMLInputElement;
+
+          if (node.nodeName === 'INPUT') {
+            //return focus when typing https://github.com/radix-ui/primitives/blob/main/packages/react/select/src/Select.tsx#L529
+            setTimeout(() => node.focus(), 1);
+          }
+        }
+
+        dropdownProps.onKeyDown?.(e);
+      },
+      [dropdownProps, search?.active]
+    );
+
+    const onOpenChange = useCallback(
+      (newOpen: boolean) => {
+        if (!open && disabled) return;
+
+        setOpen(newOpen);
+      },
+      [disabled, open]
+    );
+
     return (
-      <InputsContainer {...{ id, size, label, required, helperText, idQa, className, error, idQaForHelperText }}>
+      <InputsContainer {...{ ref, id, size, label, required, helperText, idQa, className, error, idQaForHelperText }}>
         <SelectPrimitive.Root
           value={value != null ? String(value) : undefined}
           onValueChange={onValueChange}
-          open={disabled ? false : undefined}
-          onOpenChange={newOpen => {
-            if (!open && disabled) return;
-
-            setOpen(newOpen);
-          }}
+          open={disabled ? false : open}
+          onOpenChange={onOpenChange}
         >
           <SelectPrimitive.Trigger
             className={classNames(inline ? 'gkit-inline-select' : 'gkit-select', 'input-wrapper', size, {
@@ -179,31 +263,64 @@ export const Select = React.memo(
               disabled,
               filled,
             })}
-            id-qa={classNames({ [`${idQa}-trigger`]: idQa })}
             id={id}
+            onPointerDown={e => {
+              // https://github.com/radix-ui/primitives/issues/1641#issuecomment-2110760141
+              if (e.pointerType === 'touch') {
+                e.preventDefault();
+              }
+            }}
+            onPointerUp={e => {
+              // https://github.com/radix-ui/primitives/issues/1641#issuecomment-2110760141
+              if (e.pointerType === 'touch') {
+                setOpen(o => !o);
+              }
+            }}
+            id-qa={classNames({ [`${idQa}-trigger`]: idQa })}
           >
             {startAdornment}
+
             <SelectPrimitive.Value
               placeholder={placeholder}
               aria-label={value != null ? valuePrefix + value : undefined}
-            />
+            >
+              {options.find(option => option.value === value)?.customLabel}
+            </SelectPrimitive.Value>
+
             <SelectPrimitive.Icon className="select-chevron">
               {canShowDropdown ? <ChevronUpFilledIcon /> : <ChevronDownFilledIcon />}
             </SelectPrimitive.Icon>
           </SelectPrimitive.Trigger>
-          <SelectPrimitive.Portal {...portalProps} className={classNames('gkit-select-portal', portalProps.className)}>
+
+          <SelectPrimitive.Portal
+            {...portalProps}
+            container={portalProps.container ?? (search && ref?.current ? ref.current : undefined)}
+          >
             <Fragment>
               <Overlay open={canShowDropdown} />
+
               <SelectPrimitive.Content
                 {...dropdownProps}
-                className={classNames('gkit-select-dropdown', dropdownProps.className)}
+                className={classNames(SELECT_DROPDOWN_CN, dropdownProps.className)}
                 id-qa={classNames({ [`${idQa}-dropdown`]: idQa })}
+                onKeyDown={onKeyDownContent}
               >
                 <SelectPrimitive.Viewport
                   className="gkit-select-viewport"
                   id-qa={classNames({ [`${idQa}-viewport`]: idQa })}
                 >
-                  {options.some(({ group }) => !!group) ? renderOptionsByGroups() : options.map(renderOptionItem)}
+                  {search?.active && (
+                    <TextField
+                      startAdornment={<SearchIcon />}
+                      {...(search.props ?? {})}
+                      inputRef={composedSearchRef}
+                      className={classNames('gkit-select-search', search.props?.className)}
+                      value={searchValue ?? ''}
+                      onChange={onSearchValueChange}
+                    />
+                  )}
+
+                  {renderOptions()}
                 </SelectPrimitive.Viewport>
               </SelectPrimitive.Content>
             </Fragment>

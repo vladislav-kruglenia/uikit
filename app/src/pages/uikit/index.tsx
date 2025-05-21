@@ -4,9 +4,11 @@ import React, { useLayoutEffect, useState } from 'react';
 import { Button, ButtonGroup } from '@itgenio/gkit/button';
 import { DarkModeButton } from '../../components/darkModeButton';
 import { Accordions } from './components/accordions';
+import { Backdrops } from './components/backdrops';
 import { Badges } from './components/badges';
 import { ButtonGroups } from './components/buttonGroup';
 import { Buttons } from './components/buttons';
+import { Carousels } from './components/carousel';
 import { Checkboxes } from './components/checkboxes';
 import { Colors } from './components/colors';
 import { Dropdowns } from './components/dropdowns';
@@ -14,13 +16,16 @@ import { Emojis } from './components/emojis';
 import { Icons } from './components/icons';
 import { InlineNotifications } from './components/inlineNotifications';
 import { Links } from './components/links';
+import { Loaders } from './components/loaders';
 import { Modals } from './components/modals';
 import { MultiSelects } from './components/multiSelects';
+import { Paginations } from './components/pagination';
 import { Panels } from './components/panels';
 import { Popovers } from './components/popovers';
 import { ProgressBars } from './components/progressBars';
 import { RadioButtons } from './components/radioButtons';
 import { Selects } from './components/selects';
+import { Sliders } from './components/sliders';
 import { Switchers } from './components/switchers';
 import { TabsExample } from './components/tabs';
 import { TextAreas } from './components/textAreas';
@@ -55,6 +60,11 @@ const components = [
   InlineNotifications,
   ToastNotifications,
   ProgressBars,
+  Carousels,
+  Loaders,
+  Sliders,
+  Paginations,
+  Backdrops,
 ].sort((a, b) => a.displayName.localeCompare(b.displayName));
 
 const DEFAULT = 0;

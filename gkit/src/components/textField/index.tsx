@@ -1,6 +1,14 @@
 import './style.less';
+
 import classNames from 'classnames';
-import React, { ForwardedRef, forwardRef, HTMLInputTypeAttribute, PropsWithChildren, useMemo } from 'react';
+import React, {
+  ForwardedRef,
+  forwardRef,
+  HTMLInputTypeAttribute,
+  MouseEventHandler,
+  PropsWithChildren,
+  useMemo,
+} from 'react';
 import { InputsContainer } from '../internal/components/inputsContainer';
 import { generateId } from '../internal/utils/generateId';
 
@@ -37,6 +45,10 @@ export type TextFieldProps = PropsWithChildren<{
   endAdornment?: React.ReactNode;
   inputRef?: ForwardedRef<HTMLInputElement>;
   onKeyDown?: React.KeyboardEventHandler<HTMLInputElement>;
+  onTouchStart?: React.KeyboardEventHandler<HTMLInputElement>;
+  onClick?: MouseEventHandler<HTMLDivElement>;
+  onInputClick?: MouseEventHandler<HTMLInputElement>;
+  readOnly?: boolean;
 }>;
 
 export const TextField = forwardRef(function TextField(
@@ -71,6 +83,9 @@ export const TextField = forwardRef(function TextField(
     endAdornment,
     inputRef,
     onKeyDown,
+    onTouchStart,
+    onInputClick,
+    readOnly,
   }: TextFieldProps,
   ref: ForwardedRef<HTMLDivElement>
 ) {
@@ -112,9 +127,17 @@ export const TextField = forwardRef(function TextField(
             onBlur,
             maxLength,
             disabled,
+            readOnly,
             name,
             autoComplete,
             onKeyDown,
+            onTouchStart,
+            onClick: e => {
+              if (!onInputClick) return;
+
+              e.stopPropagation();
+              onInputClick(e);
+            },
           }}
         />
 

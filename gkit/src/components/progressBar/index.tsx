@@ -2,7 +2,7 @@ import './style.less';
 
 import classNames from 'classnames';
 import React, { Fragment, FunctionComponent, PropsWithChildren } from 'react';
-import { CheckmarkCircleFilledIcon } from '../icons';
+import { CheckmarkCircleFilledIcon } from '@itgenio/icons/checkmarkCircleFilledIcon';
 
 export const PROGRESS_BAR_MIN_PROGRESS = 0;
 export const PROGRESS_BAR_MAX_PROGRESS = 100;
@@ -36,7 +36,7 @@ export type ProgressBarCustomCheckpointElementProps<T> = ProgressBarCheckpointPr
   ProgressBarCheckpointInternalProps & { done: boolean } & T;
 
 export type ProgressBarProps<S extends AnyFC, C extends ProgressBarCheckpointProps<AnyFC>> = BaseProps & {
-  startCheckpoint?: ProgressBarCheckpointProps<S>;
+  startCheckpoint?: ProgressBarCheckpointProps<S> | null;
   checkpoints: GetCheckpointProps<C>[];
   withSequentialProgress?: boolean;
 };
@@ -48,36 +48,59 @@ const ProgressBarInternal = <S extends AnyFC, C extends ProgressBarCheckpointPro
   withSequentialProgress = true,
   idQa,
 }: ProgressBarProps<S, C>) => {
+  const hasStartCheckpoint = startCheckpoint !== null;
+
   const hasFirstCheckpointProgress = checkpoints[0]?.progress !== undefined;
+  let isCheckpointsWithoutProgress = false;
 
   return (
     <div className={classNames('gkit-progress-bar', className)} id-qa={idQa}>
-      <CheckpointInternal
-        progress={hasFirstCheckpointProgress && PROGRESS_BAR_MAX_PROGRESS}
-        CheckpointComponent={hasFirstCheckpointProgress ? undefined : ProgressBarCheckpointElementWrap}
-        {...startCheckpoint}
-        withoutProgressLine
-        index={0}
-        zIndex={checkpoints.length + 1}
-      />
+      {hasStartCheckpoint && (
+        <CheckpointInternal
+          progress={hasFirstCheckpointProgress && PROGRESS_BAR_MAX_PROGRESS}
+          CheckpointComponent={hasFirstCheckpointProgress ? undefined : ProgressBarCheckpointElementWrap}
+          idQa={idQa}
+          {...startCheckpoint}
+          withoutProgressLine
+          index={0}
+          zIndex={checkpoints.length + 1}
+        />
+      )}
 
       {checkpoints.map(({ progress, ...checkpoint }, index) => {
+        // Если прогресс последовательный, то убираем прогресс для чекпоинтов, которые идут после невыполненных
         if (withSequentialProgress) {
-          const prevCheckpoint = checkpoints[index - 1];
+          const prevIndex = index - 1;
+          const isPrevIndexFirstAndWithoutProgressLine = !hasStartCheckpoint && prevIndex === 0;
+
+          const prevCheckpoint = isPrevIndexFirstAndWithoutProgressLine ? undefined : checkpoints[prevIndex];
 
           if (
+            !isCheckpointsWithoutProgress &&
             prevCheckpoint &&
             (prevCheckpoint.progress === undefined || prevCheckpoint.progress < PROGRESS_BAR_MAX_PROGRESS)
           ) {
-            progress = PROGRESS_BAR_MIN_PROGRESS;
+            isCheckpointsWithoutProgress = true;
           }
         }
+
+        const isFirstCheckpoint = index === 0;
+        const isFirstCheckpointWithoutProgressLine = !hasStartCheckpoint && isFirstCheckpoint;
+
+        const checkpointProgress =
+          isFirstCheckpointWithoutProgressLine && checkpoints[1]?.progress !== undefined
+            ? PROGRESS_BAR_MAX_PROGRESS
+            : isCheckpointsWithoutProgress
+            ? PROGRESS_BAR_MIN_PROGRESS
+            : progress;
 
         return (
           <CheckpointInternal
             key={index}
+            idQa={idQa}
             {...checkpoint}
-            progress={progress}
+            progress={checkpointProgress}
+            withoutProgressLine={isFirstCheckpointWithoutProgressLine}
             index={index + 1}
             zIndex={checkpoints.length - index}
           />
@@ -115,6 +138,9 @@ const CheckpointInternal = React.memo(
       idQa,
     } = props;
 
+    const checkpointIdQa = classNames({ [`${idQa}-checkpoint`]: !!idQa });
+    const checkpointElementIdQa = classNames({ [`${checkpointIdQa}-element`]: !!checkpointIdQa });
+
     const progressWidth = `${Math.min(Math.max(PROGRESS_BAR_MIN_PROGRESS, progress ?? 0), PROGRESS_BAR_MAX_PROGRESS)}%`;
     const isCheckpointDone = progress === PROGRESS_BAR_MAX_PROGRESS;
 
@@ -124,19 +150,21 @@ const CheckpointInternal = React.memo(
           'without-progress-line': withoutProgressLine,
         })}
         style={{
-          [`${PROGRESS_BAR_CHECKPOINT_CSS_PREFIX}-z-index`]: zIndex,
-          [`${PROGRESS_BAR_CHECKPOINT_CSS_PREFIX}-border-size`]: `${PROGRESS_BAR_CHECKPOINT_BORDER_SIZE_REM}rem`,
+          [`${PROGRESS_BAR_CHECKPOINT_CSS_PREFIX}-z-index` as string]: zIndex,
+          [`${PROGRESS_BAR_CHECKPOINT_CSS_PREFIX}-border-size` as string]: `${PROGRESS_BAR_CHECKPOINT_BORDER_SIZE_REM}rem`,
         }}
         data-checkpoint-index={index}
-        id-qa={idQa}
+        id-qa={checkpointIdQa}
       >
         {!withoutProgressLine && (
-          <div className="progress-line" id-qa={classNames({ [`${idQa}-progress-line`]: !!idQa })}>
+          <div className="progress-line" id-qa={classNames({ [`${checkpointIdQa}-line`]: !!checkpointIdQa })}>
             {!withoutBeforeSibling && <div className={classNames('progress-before', { filled: !!progress })} />}
 
             <div
               className="progress-filled"
-              style={{ [`${PROGRESS_BAR_CHECKPOINT_CSS_PREFIX}-width`]: progressWidth }}
+              style={{ [`${PROGRESS_BAR_CHECKPOINT_CSS_PREFIX}-width` as string]: progressWidth }}
+              id-qa={classNames({ [`${checkpointIdQa}-line-filled`]: !!checkpointIdQa })}
+              data-filled={progressWidth}
             />
 
             {!withoutAfterSibling && <div className={classNames('progress-after', { filled: isCheckpointDone })} />}
@@ -150,15 +178,13 @@ const CheckpointInternal = React.memo(
               <CheckpointComponent
                 {...(CheckpointComponentProps as Parameters<T>[0])}
                 {...props}
+                idQa={checkpointElementIdQa}
                 done={isCheckpointDone}
               />
             )}
           </Fragment>
         ) : (
-          <ProgressBarCheckpointElementWrap
-            done={isCheckpointDone}
-            idQa={classNames({ [`${idQa}-checkpoint-wrap`]: !!idQa })}
-          >
+          <ProgressBarCheckpointElementWrap done={isCheckpointDone} idQa={checkpointElementIdQa}>
             <ProgressBarCheckpointDefaultElement title={`${index}`} done={isCheckpointDone} />
           </ProgressBarCheckpointElementWrap>
         )}

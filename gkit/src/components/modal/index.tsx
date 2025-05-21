@@ -1,8 +1,8 @@
+import classNames from 'classnames';
 import React, { PropsWithChildren } from 'react';
-import { Portal } from '../portal';
+import { Backdrop } from '../backdrop';
 import { ModalHeader, ModalTitle, ModalText, ModalBody, ModalFooter } from './components';
-import { usePreventBodyScroll } from './hooks/useBodyScroll';
-import { ModalInternal, ModalContentInternal, ModalWrapperInternal, ModalOverlayInternal } from './internal';
+import { ModalInternal, ModalContentInternal } from './internal';
 
 export type { ModalHeaderProps, ModalTitleProps, ModalTextProps, ModalBodyProps, ModalFooterProps } from './components';
 
@@ -12,6 +12,7 @@ export type ModalProps = PropsWithChildren<{
   open?: boolean;
   asBlock?: boolean;
   fullScreen?: boolean;
+  wideScreen?: boolean;
   preventBodyScroll?: boolean;
   ignoreOverlayClick?: boolean;
   idQa?: string;
@@ -24,21 +25,20 @@ export function Modal({
   onClose,
   asBlock,
   fullScreen,
+  wideScreen,
   preventBodyScroll = true,
   ignoreOverlayClick,
   idQa,
   idQaContent,
   children,
 }: ModalProps) {
-  usePreventBodyScroll(preventBodyScroll && open);
-
   // Для блока необязательно передавать props.open, поэтому явно проверяем на false
   if (open === false) return null;
 
   if (asBlock) {
     return (
       <ModalInternal className={className} asBlock idQa={idQa}>
-        <ModalContentInternal onClose={onClose} fullScreen={fullScreen} idQa={idQaContent}>
+        <ModalContentInternal onClose={onClose} fullScreen={fullScreen} wideScreen={wideScreen} idQa={idQaContent}>
           {children}
         </ModalContentInternal>
       </ModalInternal>
@@ -46,17 +46,19 @@ export function Modal({
   }
 
   return (
-    <Portal>
-      <ModalInternal className={className} asBlock={false} idQa={idQa}>
-        <ModalWrapperInternal>
-          <ModalOverlayInternal onClose={onClose} ignoreOverlayClick={ignoreOverlayClick} />
-
-          <ModalContentInternal onClose={onClose} fullScreen={fullScreen} idQa={idQaContent}>
-            {children}
-          </ModalContentInternal>
-        </ModalWrapperInternal>
-      </ModalInternal>
-    </Portal>
+    <Backdrop
+      className={classNames('gkit-modal', className, { 'wide-screen': wideScreen })}
+      classNameWrapper="modal-wrapper"
+      classNameOverlay="modal-overlay"
+      onClick={onClose}
+      preventBodyScroll={preventBodyScroll}
+      ignoreOverlayClick={ignoreOverlayClick}
+      idQa={idQa}
+    >
+      <ModalContentInternal onClose={onClose} fullScreen={fullScreen} wideScreen={wideScreen} idQa={idQaContent}>
+        {children}
+      </ModalContentInternal>
+    </Backdrop>
   );
 }
 

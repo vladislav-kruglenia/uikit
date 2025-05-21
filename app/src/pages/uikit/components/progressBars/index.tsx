@@ -1,17 +1,20 @@
 import './style.less';
 
 import React, { Fragment } from 'react';
-import { ArrowRightIcon, ArrowCircleRightFilledIcon } from '@itgenio/gkit/icons';
 import {
   ProgressBar,
   ProgressBarCheckpointElementWrap,
   ProgressBarCustomCheckpointElementProps,
   ProgressBarProps,
 } from '@itgenio/gkit/progressBar';
+import { ArrowCircleRightFilledIcon } from '@itgenio/icons/arrowCircleRightFilledIcon';
+import { ArrowRightIcon } from '@itgenio/icons/arrowRightIcon';
 
-const CustomCheckpointElement = ({ done, asd }: ProgressBarCustomCheckpointElementProps<{ asd: string }>) => {
+const CustomCheckpointElement = ({ done, asd, idQa }: ProgressBarCustomCheckpointElementProps<{ asd: string }>) => {
+  console.log(asd);
+
   return (
-    <ProgressBarCheckpointElementWrap done={done}>
+    <ProgressBarCheckpointElementWrap done={done} idQa={`${idQa}-qwe`}>
       {done ? (
         <ArrowCircleRightFilledIcon
           style={{
@@ -31,8 +34,6 @@ const CustomCheckpointElement = ({ done, asd }: ProgressBarCustomCheckpointEleme
           }}
         />
       )}
-
-      {asd}
     </ProgressBarCheckpointElementWrap>
   );
 };
@@ -41,16 +42,25 @@ export function ProgressBars() {
   // @ts-expect-error generic type
   const states: { state: string; props: ProgressBarProps }[] = [
     { state: 'No progress', props: { checkpoints: [{}, {}, {}] } },
-    { state: 'First progress', props: { checkpoints: [{ progress: 40 }, {}, {}] } },
+    {
+      state: 'First progress',
+      props: { checkpoints: [{ progress: 40 }, {}, {}] },
+    },
     { state: 'First done, second progress', props: { checkpoints: [{ progress: 100 }, { progress: 40 }, {}] } },
     { state: 'All done', props: { checkpoints: [{ progress: 100 }, { progress: 100 }, { progress: 100 }] } },
     {
       state: 'Checkpoints with custom elements',
       props: {
+        idQa: 'custom-progress-bar',
         checkpoints: [
-          { CheckpointElement: CustomCheckpointElement, CheckpointComponentProps: { asd: 'qwe' }, progress: 100 },
-          { CheckpointElement: CustomCheckpointElement, progress: 50 },
-          { CheckpointElement: CustomCheckpointElement },
+          {
+            idQa: 'my',
+            CheckpointComponent: CustomCheckpointElement,
+            CheckpointComponentProps: { asd: 'qwe' },
+            progress: 100,
+          },
+          { CheckpointComponent: CustomCheckpointElement, progress: 50 },
+          { CheckpointComponent: CustomCheckpointElement },
         ],
       },
     },
@@ -59,12 +69,43 @@ export function ProgressBars() {
       props: { checkpoints: [{ progress: 100 }, { progress: 100 }, { progress: 50 }] },
     },
     {
-      state: 'withSequentialProgress === true, (by default)',
-      props: { checkpoints: [{ progress: 100 }, { progress: 40 }, { progress: 100 }], withSequentialProgress: true },
+      state: 'withSequentialProgress === true, (by default). [100, 100, undefined, 100, 100]',
+      props: {
+        checkpoints: [
+          { progress: 100 },
+          { progress: 100 },
+          { progress: undefined },
+          { progress: 100 },
+          { progress: 100 },
+        ],
+        withSequentialProgress: true,
+      },
     },
     {
-      state: 'withSequentialProgress === false',
-      props: { checkpoints: [{ progress: 100 }, { progress: 40 }, { progress: 100 }], withSequentialProgress: false },
+      state: 'withSequentialProgress === false. [100, 100, undefined, 100, 100]',
+      props: {
+        checkpoints: [
+          { progress: 100 },
+          { progress: 100 },
+          { progress: undefined },
+          { progress: 100 },
+          { progress: 100 },
+        ],
+        withSequentialProgress: false,
+      },
+    },
+    {
+      state: 'without start checkpoint',
+      props: {
+        startCheckpoint: null,
+        checkpoints: [
+          { withoutProgressLine: true },
+          { progress: 50, withoutProgressLine: true },
+          { withoutProgressLine: true },
+          {},
+          {},
+        ],
+      },
     },
   ];
 

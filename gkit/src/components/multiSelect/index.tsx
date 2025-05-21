@@ -1,18 +1,19 @@
 import './style.less';
 import classNames from 'classnames';
-import React, { Fragment, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import React, { Fragment, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import useOnClickOutside from 'use-onclickoutside';
+import { CheckmarkFilledIcon } from '@itgenio/icons/checkmarkFilledIcon';
+import { ChevronDownFilledIcon } from '@itgenio/icons/chevronDownFilledIcon';
+import { ChevronUpFilledIcon } from '@itgenio/icons/chevronUpFilledIcon';
+import { DismissFilledIcon } from '@itgenio/icons/dismissFilledIcon';
+import { SearchIcon } from '@itgenio/icons/searchIcon';
+import { SubtractFilledIcon } from '@itgenio/icons/subtractFilledIcon';
 import { groupByPropertyToDict } from '@itgenio/utils';
+import { Badge } from '../badge';
 import { Checkbox } from '../checkbox';
-import {
-  SubtractFilledIcon,
-  ChevronDownFilledIcon,
-  ChevronUpFilledIcon,
-  CheckmarkFilledIcon,
-  DismissFilledIcon,
-} from '../icons';
 import { InputsContainer } from '../internal/components/inputsContainer';
 import { generateId } from '../internal/utils/generateId';
+import { TextField, TextFieldProps } from '../textField';
 
 const DROPDOWN_PADDING = 20;
 
@@ -48,6 +49,13 @@ export type MultiSelectProps<Option extends MultiSelectOption> = {
   inputText?: string;
   groupConfig?: GroupConfig;
   idQaForHelperText?: string;
+  search?: { active: boolean; props?: TextFieldProps };
+  renderValuesInline?:
+    | {
+        /** If children will have nodes (not strings), enter a coeff to correct calc the field length */
+        coeffForShowCount?: number;
+      }
+    | boolean;
 };
 
 export function MultiSelect<T extends MultiSelectOption>({
@@ -69,12 +77,20 @@ export function MultiSelect<T extends MultiSelectOption>({
   renderValues: renderValuesProp,
   groupConfig,
   idQaForHelperText,
+  search,
+  renderValuesInline,
 }: MultiSelectProps<T>) {
   const [open, setOpen] = useState(false);
   const hasValue = values.length > 0;
+  const [searchValueLocal, setSearchValue] = useState<string | undefined>(undefined);
+
+  const searchValue = search?.props?.value?.toString() ?? searchValueLocal;
+  const hasValueInSearch = searchValue && searchValue.length > 0;
 
   const ref = useRef(null);
   const dropdownRef = useRef<HTMLUListElement>(null);
+  const [contentNode, setContentNode] = useState<HTMLDivElement | null>(null);
+
   const id = useMemo(() => generateId(), []);
 
   const canShowDropdown = open && !disabled;
@@ -99,9 +115,77 @@ export function MultiSelect<T extends MultiSelectOption>({
     }
   }, [open]);
 
+  useEffect(() => {
+    if (!search?.active) return;
+
+    if (!open && hasValueInSearch) {
+      setSearchValue('');
+    }
+  }, [open, hasValueInSearch, search?.active]);
+
+  const onSearchValueChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      setSearchValue(e.target.value);
+
+      search.props?.onChange?.(e);
+    },
+    [search?.props]
+  );
+
+  if (search?.active && hasValueInSearch) {
+    options = options.filter(option => option.label.toLowerCase().includes(searchValue.toLowerCase()));
+  }
+
   const renderValues = () => {
     if (renderValuesProp) {
-      return renderValuesProp(values);
+      const width = contentNode?.clientWidth;
+
+      if (renderValuesInline && width && options.length > 0 && values.length > 0) {
+        const { paddingLeft, paddingRight } = window.getComputedStyle(contentNode);
+
+        const pLeft = +paddingLeft.replace('px', '');
+        const pRight = +paddingRight.replace('px', '');
+
+        const isRenderValuesInlineWithConfig = typeof renderValuesInline === 'object';
+
+        const customCoeff = isRenderValuesInlineWithConfig ? renderValuesInline.coeffForShowCount || 1 : 1;
+
+        const averageLetterWidth = 10;
+
+        const maxAverageLettersInField = ((width - pLeft - pRight) * customCoeff) / averageLetterWidth;
+
+        const { valuesForRender, counter } = values.reduce<{
+          valuesForRender: MultiSelectProps<MultiSelectOption>['values'];
+          counter: number;
+          labels: string;
+        }>(
+          (acc, value) => {
+            const label = options.find(option => option.value === value)?.label;
+
+            if (label) {
+              acc.labels += `${label}, `;
+            }
+
+            if (acc.valuesForRender.length < 1 || acc.labels.length < maxAverageLettersInField) {
+              acc.valuesForRender.push(value);
+            } else {
+              acc.counter++;
+            }
+
+            return acc;
+          },
+          { valuesForRender: [], counter: 0, labels: '' }
+        );
+
+        return (
+          <Fragment>
+            {renderValuesProp(valuesForRender)}
+            {counter > 0 && <Badge size={size}>+{counter}</Badge>}
+          </Fragment>
+        );
+      }
+
+      return inputText && !hasValue ? inputText : renderValuesProp(values);
     }
 
     return (
@@ -202,7 +286,9 @@ export function MultiSelect<T extends MultiSelectOption>({
         helperText,
         error,
         idQaForHelperText,
-        className: classNames('gkit-multi-select', className),
+        className: classNames('gkit-multi-select', className, {
+          'full-width': renderValuesProp && renderValuesInline,
+        }),
       }}
     >
       <div
@@ -218,6 +304,11 @@ export function MultiSelect<T extends MultiSelectOption>({
           setOpen(!open);
         }}
         id={id}
+        ref={node => {
+          if (node) {
+            setContentNode(node);
+          }
+        }}
       >
         <div className={classNames('multi-select-label', size, { disabled, selected: hasValue })}>{renderValues()}</div>
 
@@ -229,7 +320,17 @@ export function MultiSelect<T extends MultiSelectOption>({
       {/* TODO: Нужно переделать на портал */}
       {canShowDropdown && (
         <ul ref={dropdownRef} id-qa={classNames({ [`${idQa}-dropdown`]: idQa })} className="multi-select-dropdown">
-          {hasSelectAllOption && (
+          {search?.active && (
+            <TextField
+              startAdornment={<SearchIcon />}
+              {...(search.props ?? {})}
+              className={classNames('gkit-multi-select-search', search.props?.className)}
+              value={searchValue ?? ''}
+              onChange={onSearchValueChange}
+            />
+          )}
+
+          {hasSelectAllOption && !hasValueInSearch && (
             <li
               id-qa={classNames({ [`${idQa}-option-select-all`]: idQa })}
               className={classNames('multi-select-option', size)}

@@ -26,10 +26,13 @@ export const InputsContainer = forwardRef<HTMLDivElement, InputsContainerProps>(
       {label && (
         <Label htmlFor={id} className={classNames('inputs-container-label', size)}>
           {label}
+
           {required && '*'}
         </Label>
       )}
+
       {children}
+
       {helperText && (
         <span
           id-qa={idQaForHelperText || 'helper-text'}

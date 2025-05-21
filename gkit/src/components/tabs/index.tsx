@@ -2,7 +2,8 @@ import './style.less';
 
 import classNames from 'classnames';
 import React, { useLayoutEffect, useRef, useState } from 'react';
-import { ChevronLeftIcon, ChevronRightIcon } from '../icons';
+import { ChevronLeftIcon } from '@itgenio/icons/chevronLeftIcon';
+import { ChevronRightIcon } from '@itgenio/icons/chevronRightIcon';
 
 export const TABS_SCROLL_PADDING_PX = 10;
 export const TABS_SCROLL_VALUE_PX = 50;
@@ -113,6 +114,7 @@ export function Tabs({ onChange, value, className, isChips, scrollable, idQa, ch
           <div
             className={classNames('tabs-scroll-btn-wrap', 'left-scroll-btn', { 'scroll-btn-active': hasScrollLeft })}
             onClick={() => scrollTabsElement(-1)}
+            id-qa={classNames({ [`${idQa}-scroll-btn-left`]: !!idQa })}
           >
             <div className="tabs-scroll-btn">
               <ChevronLeftIcon />
@@ -138,6 +140,7 @@ export function Tabs({ onChange, value, className, isChips, scrollable, idQa, ch
           <div
             className={classNames('tabs-scroll-btn-wrap', 'right-scroll-btn', { 'scroll-btn-active': hasScrollRight })}
             onClick={() => scrollTabsElement(1)}
+            id-qa={classNames({ [`${idQa}-scroll-btn-right`]: !!idQa })}
           >
             <div className="tabs-scroll-btn">
               <ChevronRightIcon />

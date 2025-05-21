@@ -4,17 +4,31 @@ import { Select, SelectProps, SelectOption } from '@itgenio/gkit/select';
 
 const sizes = ['small', 'large'] as const;
 
-const defaultOptions: SelectOption[] = Array.from({ length: 20 }, (_, i) => {
+export const defaultSelectOptions: SelectOption[] = Array.from({ length: 20 }, (_, i) => {
   const index = i + 1;
 
-  if (i == 3) {
-    return { label: `Option${index}`, value: String(index), customDropdownOption: <span>Option ({index})</span> };
+  const baseOption: SelectOption = { label: `Option${index}`, value: String(index) };
+
+  if (i === 3) {
+    return { ...baseOption, customDropdownOption: <span>Option ({index})</span> };
   }
 
-  return { label: `Option${index}`, value: String(index) };
+  if (index === 5) {
+    return {
+      ...baseOption,
+      customDropdownOption: <span>Option with custom label ({index})</span>,
+      customLabel: (
+        <div>
+          <span>CustomLabel</span> <div>({index})</div>
+        </div>
+      ),
+    };
+  }
+
+  return baseOption;
 });
 
-const optionsWithGroups = defaultOptions.map((option, i) => {
+const optionsWithGroups = defaultSelectOptions.map((option, i) => {
   if (i > 15) return option;
 
   return {
@@ -28,7 +42,7 @@ type State = { title: string; props?: SelectProps; options?: SelectProps['option
 export function Selects() {
   const [value, setValue] = useState<string | number | undefined>(undefined);
 
-  const renderState = ({ title, props, options = defaultOptions }: State, index: number) => {
+  const renderState = ({ title, props, options = defaultSelectOptions }: State, index: number) => {
     return (
       <Fragment key={index}>
         <div>{title}</div>
@@ -42,7 +56,7 @@ export function Selects() {
             helperText="Desc"
             options={options}
             value={value}
-            onChange={value => setValue(value)}
+            onChange={setValue}
             {...props}
           />
         ))}
@@ -73,6 +87,7 @@ export function Selects() {
     { title: 'Error', props: { error: true } },
     { title: 'Disabled', props: { disabled: true } },
     { title: 'StartAdornment', props: { startAdornment: <span>Icon</span> } },
+    { title: 'With search', props: { search: { active: true, props: { placeholder: 'Search' } } } },
   ];
 
   return (

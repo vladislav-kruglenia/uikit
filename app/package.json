@@ -3,6 +3,7 @@
   "private": true,
   "version": "0.0.1",
   "scripts": {
+    "start": "npm run dev",
     "dev": "vite --port 3004",
     "build": "tsc && vite build",
     "preview": "vite preview",
@@ -11,6 +12,8 @@
   },
   "dependencies": {
     "@itgenio/gkit": "file:../gkit",
+    "@itgenio/icons": "file:../icons",
+    "@itgenio/utils": "^0.0.7",
     "classnames": "^2.3.1",
     "react": "^17.0.2",
     "react-dom": "^17.0.2"
@@ -18,9 +21,10 @@
   "devDependencies": {
     "@types/react": "^17.0.39",
     "@types/react-dom": "^17.0.11",
-    "@vitejs/plugin-react": "^2.0.0",
+    "@vitejs/plugin-react": "^4.2.0",
     "less": "^4.1.2",
-    "typescript": "^4.5.4",
-    "vite": "^3.0.2"
+    "typescript": "^5.4.5",
+    "vite": "^5.2.9",
+    "vite-plugin-dynamic-import": "^1.5.0"
   }
 }

@@ -1,46 +1,36 @@
 import './style.less';
 
-import React, { CSSProperties, useCallback, useState } from 'react';
-import * as gkitIcons from '@itgenio/gkit/icons';
-import { Tooltip } from '@itgenio/gkit/tooltip';
-import { STEP, Slider } from '../slider';
+import React from 'react';
+import { iconsList } from '@itgenio/icons/iconsList';
+import { chunkArray } from '@itgenio/utils';
+import { IconsView } from './iconsView';
 
-const DEFAULT_SIZE = 40;
+const ALL_ICONS = iconsList
+  .sort(([, a], [, b]) => a.localeCompare(b))
+  .map(([fileName, iconName]) => {
+    const LazyComponent = React.lazy(() => {
+      return import(`@itgenio/icons/${fileName}`).then(item => {
+        return { default: item[iconName] };
+      });
+    });
 
-const ICONS = Object.entries(gkitIcons)
-  .filter(([key, value]) => typeof value === 'function' && key.endsWith('Icon'))
-  .map(([, value]) => value as Function)
-  .sort((a, b) => a.name.localeCompare(b.name));
+    const component = function Icon() {
+      return (
+        <React.Suspense fallback={null}>
+          <LazyComponent />
+        </React.Suspense>
+      );
+    };
+
+    Object.defineProperty(component, 'name', { value: iconName });
+
+    return component;
+  });
+
+const ICONS_CHUNKS = chunkArray(ALL_ICONS, 100);
 
 export function Icons() {
-  const [currentSize, setCurrentSize] = useState(DEFAULT_SIZE);
-
-  const onClickMinus = useCallback(() => setCurrentSize(s => s - STEP), []);
-  const onClickPlus = useCallback(() => setCurrentSize(s => s + STEP), []);
-  const onChangeInput = useCallback(e => setCurrentSize(e.target.valueAsNumber), []);
-
-  return (
-    <div className="icons">
-      <div className="sizes">
-        <span>Current size: {currentSize}</span>
-
-        <Slider
-          onClickMinus={onClickMinus}
-          onClickPlus={onClickPlus}
-          value={currentSize}
-          onChangeInput={onChangeInput}
-        />
-      </div>
-
-      <div className="board" style={{ '--icon-size': `${currentSize}px` } as CSSProperties}>
-        {ICONS.map(Icon => (
-          <Tooltip key={Icon.name} content={Icon.name}>
-            <Icon />
-          </Tooltip>
-        ))}
-      </div>
-    </div>
-  );
+  return <IconsView iconsSets={ICONS_CHUNKS} />;
 }
 
 Icons.displayName = 'Icons';

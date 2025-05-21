@@ -7,12 +7,16 @@
   cursor: pointer;
 
   input[type="radio"] {
+    //в ios применяются стили от платформы (width, height переопределяются)
+    width: auto;
+    height: auto;
     overflow: hidden;
     position: relative;
     appearance: none;
     -webkit-appearance: none;
     background-color: var(--gkit-color-neutral-0);
     cursor: pointer;
+    border-radius: 50%;
 
     &:before {
       content: "";
